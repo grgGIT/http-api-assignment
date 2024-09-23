@@ -5,7 +5,41 @@
   <link rel="stylesheet" type="text/css" href="./style.css">
   
   <script>
+document.getElementById('send').addEventListener('click', async () => {
+    const selectedPage = document.getElementById('page').value;
+    const selectedType = document.getElementById('type').value;
 
+    // Perform fetch request
+    try {
+      const response = await fetch(selectedPage + (selectedPage.includes('?') ? '&' : '?') + (selectedPage === '/badRequest' ? 'valid=true' : '') + (selectedPage === '/unauthorized' ? 'loggedIn=yes' : ''), {
+        headers: {
+          'Accept': selectedType
+        }
+      });
+
+      const rawData = await response.text(); // Get the raw text response
+      console.log('Raw Response:', rawData); // Print raw response to console
+
+      let data;
+      if (response.headers.get('content-type').includes('application/json')) {
+        data = JSON.parse(rawData);
+      } else {
+        // Parsing XML response
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(rawData, 'text/xml');
+        data = {
+          message: xmlDoc.getElementsByTagName('message')[0].textContent,
+          id: xmlDoc.getElementsByTagName('id')[0].textContent
+        };
+      }
+
+      // Display the message on the page
+      document.getElementById('content').innerHTML = `<p>${data.message}</p><p>ID: ${data.id}</p>`;
+    } catch (error) {
+      console.error('Fetch Error:', error);
+      document.getElementById('content').innerHTML = '<p>Error occurred while fetching data.</p>';
+    }
+  });
   </script>
 </head>
 <body>

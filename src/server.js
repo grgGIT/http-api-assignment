@@ -1,54 +1,58 @@
 /* eslint-disable no-console */
 const http = require('http');
 const fs = require('fs');
-
 const path = require('path');
 
 const port = process.env.PORT || process.env.NODE_PORT || 3000;
 
 const onRequest = (request, response) => {
-  if (request.url === '/' || request.url === '/client.html') {
-    const filePath = path.join(__dirname, '../client/client.html');
+  const acceptHeader = request.headers['.accept'] || 'application/json'; // Correct key for accept header
 
-    // Read the HTML file from the filesystem
-    fs.readFile(filePath, (err, data) => {
-      if (err) {
-        console.error('File read error:', err); // Log the error
-        response.writeHead(500, { 'Content-Type': 'text/plain' });
-        response.write('Internal Server Error');
-        response.end();
-      } else {
-        response.writeHead(200, { 'Content-Type': 'text/html' });
-        response.write(data);
-        response.end();
-      }
-    });
-  }
+  // Function to send response in JSON or XML
   const sendResponse = (statusCode, message) => {
     const jsonResponse = {
       message,
       id: statusCode,
     };
-    const acceptHeader = request.headers['.accept'] || 'application/json';
-    
+
+    let contentType = 'application/json'; // Default content type
+
     if (acceptHeader.includes('text/xml')) {
-        contentType = 'text/xml';
-        response.writeHead(statusCode, { 'Content-Type': contentType });
-        const xmlResponse = `<message>${message}</message><id>${statusCode}</id>`;
-        response.end(xmlResponse);
+      contentType = 'text/xml';
+      response.writeHead(statusCode, { 'Content-Type': contentType });
+      const xmlResponse = `<message>${message}</message><id>${statusCode}</id>`;
+      response.end(xmlResponse);
+    } else {
+      response.writeHead(statusCode, { 'Content-Type': contentType });
+      response.end(JSON.stringify(jsonResponse));
+    }
+  };
+
+  const url = request.url;
+  // Serve the HTML file for the root URL
+  if (url === '/' || url === '/client.html') {
+    const filePath = path.join(__dirname, '../client/client.html');
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        console.error('File read error:', err);
+        response.writeHead(500, { 'Content-Type': 'text/plain' });
+        response.end('Internal Server Error');
       } else {
-        response.writeHead(statusCode, { 'Content-Type': contentType });
-        response.end(JSON.stringify(jsonResponse));
+        response.writeHead(200, { 'Content-Type': 'text/html' });
+        response.end(data);
       }
-    };
-  const codes = request.url;
-  // Handle various routes
-  switch (codes) {
+    });
+    return; // Exit after handling HTML response
+  }
+
+  const validQuery = new URLSearchParams(request.url.split('?')[1]).get('valid');
+  const loggedInQuery = new URLSearchParams(request.url.split('?')[1]).get('loggedIn');
+  // Handle various API routes
+  switch (url) {
     case '/success':
       sendResponse(200, 'Success!');
       break;
     case '/badRequest':
-      const validQuery = new URLSearchParams(request.url.split('?')[1]).get('valid');
       if (!validQuery) {
         sendResponse(400, 'Bad Request: missing query parameter ?valid=true');
       } else if (validQuery === 'true') {
@@ -56,7 +60,6 @@ const onRequest = (request, response) => {
       }
       break;
     case '/unauthorized':
-      const loggedInQuery = new URLSearchParams(request.url.split('?')[1]).get('loggedIn');
       if (!loggedInQuery) {
         sendResponse(401, 'Unauthorized: missing query parameter ?loggedIn=yes');
       } else if (loggedInQuery === 'yes') {
@@ -81,6 +84,5 @@ const onRequest = (request, response) => {
 const server = http.createServer(onRequest);
 
 server.listen(port, () => {
-// eslint-disable-next-line no-console
   console.log(`Listening on 127.0.0.1:${port}`);
 });
