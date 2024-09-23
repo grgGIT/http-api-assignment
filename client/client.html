@@ -2,44 +2,71 @@
 <html lang="en">
 <head>
   <title>Our simple HTTP server</title>
-  <link rel="stylesheet" type="text/css" href="./style.css">
-  
-  <script>
-document.getElementById('send').addEventListener('click', async () => {
-    const selectedPage = document.getElementById('page').value;
-    const selectedType = document.getElementById('type').value;
-
-    // Perform fetch request
-    try {
-      const response = await fetch(selectedPage + (selectedPage.includes('?') ? '&' : '?') + (selectedPage === '/badRequest' ? 'valid=true' : '') + (selectedPage === '/unauthorized' ? 'loggedIn=yes' : ''), {
-        headers: {
-          'Accept': selectedType
-        }
-      });
-
-      const rawData = await response.text(); // Get the raw text response
-      console.log('Raw Response:', rawData); // Print raw response to console
-
-      let data;
-      if (response.headers.get('content-type').includes('application/json')) {
-        data = JSON.parse(rawData);
-      } else {
-        // Parsing XML response
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(rawData, 'text/xml');
-        data = {
-          message: xmlDoc.getElementsByTagName('message')[0].textContent,
-          id: xmlDoc.getElementsByTagName('id')[0].textContent
-        };
-      }
-
-      // Display the message on the page
-      document.getElementById('content').innerHTML = `<p>${data.message}</p><p>ID: ${data.id}</p>`;
-    } catch (error) {
-      console.error('Fetch Error:', error);
-      document.getElementById('content').innerHTML = '<p>Error occurred while fetching data.</p>';
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <style>
+    html, body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
     }
-  });
+
+    #top {
+      text-align: center;
+      margin: 0 auto;
+    }
+
+    #top h1 {
+      font-size: 2em;
+    }
+
+    #content {
+      margin-top: 100px;
+      font-size: 2em;
+      text-align: center;
+    }
+  </style>
+  <script>
+    async function handleResponse() {
+      const page = document.getElementById('page').value;
+      const type = document.getElementById('type').value;
+      const content = document.getElementById('content');
+
+      try {
+        const response = await fetch(page, {
+          headers: {
+            'Accept': type
+          }
+        });
+
+        const contentType = response.headers.get('Content-Type');
+        let data;
+
+        // Parse JSON or XML response
+        if (contentType.includes('application/json')) {
+          data = await response.json();
+          // Log JSON response in desired format
+          console.log(`{message: "${data.message}", id: "${data.id}"}`);
+        } else if (contentType.includes('text/xml')) {
+          const text = await response.text();
+          const parser = new DOMParser();
+          const xml = parser.parseFromString(text, 'application/xml');
+          data = {
+            message: xml.querySelector('message').textContent,
+            id: xml.querySelector('id').textContent
+          };
+          // Log XML response in desired format
+          console.log(`<response><message>${data.message}</message><id>${data.id}</id></response>`);
+        }
+
+        // Display response data
+        content.innerHTML = `<b>${data.message} Code ${response.status}</b><br><p></p>`;
+        
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        content.innerHTML = `<b>Error fetching data</b>`;
+      }
+    }
   </script>
 </head>
 <body>
@@ -58,7 +85,7 @@ document.getElementById('send').addEventListener('click', async () => {
       <option value="application/json">JSON</option>
       <option value="text/xml">XML</option>
     </select>
-    <button id="send">Send</button>
+    <button id="send" onclick="handleResponse()">Send</button>
   </section>
   <section id="content">
   </section>
