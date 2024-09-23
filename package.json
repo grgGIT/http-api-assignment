@@ -1,0 +1,22 @@
+{
+    "name": "api-assign-gracia",
+    "version": "1.0.0",
+    "description": "API creation project",
+    "main": "./src/server.js", 
+    "rules": {
+      "no-console": "off",
+    "linebreak-style": ["error", "windows"]
+  },
+    "scripts": {
+      "start": "node ./src/server.js",  
+      "prestart": "eslint ./src --fix",
+      "test": "echo \"Tests Complete\""  
+    },
+    "author": "Geoff Gracia",
+    "license": "ISC",
+    "devDependencies": {
+      "eslint": "^8.57.0",
+                "eslint-config-airbnb": "^19.0.4",
+                "eslint-plugin-import": "^2.30.0"
+    }
+  }
